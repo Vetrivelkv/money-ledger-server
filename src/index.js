@@ -3,6 +3,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const env = require("./config/env");
 const userRoutes = require("./modules/users/user.routes");
+const yearRoutes = require("./modules/years/year.routes");
 
 const authRoutes = require("./routes/auth.routes");
 const { runMigrations } = require("./db/migrate");
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
+app.use("/years", yearRoutes);
 
 async function start() {
   try {
