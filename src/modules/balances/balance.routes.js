@@ -9,6 +9,9 @@ const balanceAdjustSchema = require("./balance.adjust.schema");
 const balanceTransactionSchema = require("./balance.transaction.schema");
 
 router.get("/", requireAuth, BalanceController.listBalances);
+
+// Transactions across ALL balances (most recent first). Use ?limit=10 or ?limit=0 for all.
+router.get("/transactions", requireAuth, BalanceController.listUserTransactions);
 router.post("/", requireAuth, validateBody(balanceSchema), BalanceController.upsertBalance);
 
 // Main API to record balance-related changes with description

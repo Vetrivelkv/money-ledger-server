@@ -38,20 +38,30 @@ async function insertTxn({ balanceId, year, month, type, amount, description, so
  */
 
 module.exports = {
-  // GET /balances?year=2026
+  // GET /balances?year=2026 (or GET /balances to list all balances)
   listBalances: async (req, res) => {
     try {
       const userId = req.user?.userId;
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
-      const year = Number(req.query.year);
-      if (!year) return res.status(400).json({ message: "year is required" });
+      const yearRaw = req.query.year;
+      const year = yearRaw != null && yearRaw !== "" ? Number(yearRaw) : null;
 
-      const rows = await r
-        .table(BALANCES_TABLE)
-        .getAll(year, { index: "year" })
-        .orderBy("month")
-        .run();
+      let rows;
+
+      if (Number.isFinite(year) && year) {
+        rows = await r
+          .table(BALANCES_TABLE)
+          .getAll(year, { index: "year" })
+          .orderBy("month")
+          .run();
+      } else {
+        // List all balances (for overall balance view on client)
+        rows = await r
+          .table(BALANCES_TABLE)
+          .orderBy(r.desc("year"), "month")
+          .run();
+      }
 
       return res.json({
         balances: rows.map((b) => ({
@@ -68,6 +78,32 @@ module.exports = {
       });
     } catch (err) {
       console.error("listBalances error:", err);
+      return res.status(500).json({ message: "Server error" });
+    }
+  },
+
+  // GET /balances/transactions?limit=10 (or limit=0 for all)
+  // Returns transactions across ALL balances for the authenticated user, newest first.
+  listUserTransactions: async (req, res) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      const limit = req.query.limit != null ? Number(req.query.limit) : 10;
+
+      let q = r
+        .table(TXN_TABLE)
+        .filter({ userId })
+        .orderBy(r.desc("createdAt"));
+
+      if (Number.isFinite(limit) && limit > 0) {
+        q = q.limit(limit);
+      }
+
+      const rows = await q.run();
+      return res.json({ transactions: rows });
+    } catch (err) {
+      console.error("listUserTransactions error:", err);
       return res.status(500).json({ message: "Server error" });
     }
   },
